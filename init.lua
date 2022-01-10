@@ -52,6 +52,10 @@ local printAll = function (tbl, pre, idx)
     end
 end
 
+local lookup = function (name)
+    return hs.audiodevice.findOutputByName(name)
+end
+
 function obj:init()
     print("current default", hs.audiodevice.defaultOutputDevice())
     printAll(hs.audiodevice.allOutputDevices(), "available", true)
@@ -91,7 +95,7 @@ end
 
 function obj:inDevices(dev)
     for _,d in ipairs(self.devices) do
-        if d:name() == dev:name() then return true end
+        if d == dev:name() then return true end
     end
     return false
 end
@@ -111,10 +115,10 @@ function obj:swap()
     if #self.devices then
         self:rotateIndex()
         local current = hs.audiodevice.defaultOutputDevice()
-        local nextDev = self.devices[self.index]
-        if #self.devices > 1 and current:uid() == nextDev:uid() then
+        local nextDev = lookup(self.devices[self.index])
+        if #self.devices > 1 and (nextDev == nil or current:uid() == nextDev:uid()) then
             self:rotateIndex()
-            nextDev = self.devices[self.index]
+            nextDev = lookup(self.devices[self.index])
         end
         nextDev:setDefaultOutputDevice()
         print("current index", self.index)
@@ -134,9 +138,9 @@ end
 ---  * The AudioSwap object
 function obj:addDevice(name)
     print("looking to add device", name)
-    local device = hs.audiodevice.findOutputByName(name)
+    local device = lookup(name)
     if device and not self:inDevices(device) then
-        table.insert(self.devices, device)
+        table.insert(self.devices, name)
     end
     print(name, device)
 
@@ -146,9 +150,9 @@ end
 function obj:delDevice(name)
     print("looking to delete device", name)
     for i, device in ipairs(self.devices) do
-        if device:name() == name then
+        if lookup(device):name() == name then
             table.remove(self.devices, i)
-            print("removing", device:name())
+            print("removing", device)
             return self
         end
     end
